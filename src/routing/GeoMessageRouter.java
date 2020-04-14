@@ -4,6 +4,8 @@
  */
 package routing;
 
+import java.math.BigInteger;
+import java. util.ArrayList;
 import core.Cast;
 import java.util.Collection;
 import java.util.Collections;
@@ -90,6 +92,8 @@ public abstract class GeoMessageRouter {
 	private List<GeoMessageListener> gmListeners;
 	/** The geomessages being transferred with msgID_hostName keys */
 	private HashMap<String, GeoMessage> incomingGeoMessages;
+	/** The parts of messages that are transferred with msgID */
+	private HashMap<String, GeoMessage[]> deliveredParts;
 	/** The geomessages this router is carrying */
 	private HashMap<String, GeoMessage> geomessages; 
 	/** The geomessages this router has received as the final recipient */
@@ -147,6 +151,7 @@ public abstract class GeoMessageRouter {
 	 */
 	public void init(GeoDTNHost geohost, List<GeoMessageListener> gmListeners) {
 		this.incomingGeoMessages = new HashMap<String, GeoMessage>();
+		this.deliveredParts = new HashMap<String, GeoMessage[]>();
 		this.geomessages = new HashMap<String, GeoMessage>();
 		this.deliveredGeoMessages = new HashMap<String, GeoMessage>();
 		this.blacklistedGeoMessages = new HashMap<String, Object>();
@@ -382,7 +387,26 @@ public abstract class GeoMessageRouter {
 			addToGeoMessages(aGeoMessage, false);
 		} else if (isFinalRecipient) {
 			if (isFirstDelivery) {
-			this.deliveredGeoMessages.put(id, aGeoMessage); 
+				String key = aGeoMessage.getId(true);
+				if(!this.deliveredParts.containsKey(key)) {
+					this.deliveredParts.put(key, new GeoMessage[4]);
+				}
+				this.deliveredParts.get(key)[aGeoMessage.getPartID()-1] = aGeoMessage;
+				if(allParts(key)) {
+					String payload = new String();
+					BigInteger[] arr = new BigInteger[4];
+					for(int i=0;i<4;i++) {
+						arr[i] = GeoMessage.encode(deliveredParts.get(key)[i].getPayload());
+					}
+					payload = GeoMessage.decrypt(arr);
+					aGeoMessage = aGeoMessage.replicate(key);
+					aGeoMessage.setPartID(0);
+					aGeoMessage.setPayload(payload);
+//					System.out.println("received" + aMessage.getPayload() + aMessage.getId(true));
+//					this.deliveredParts.remove(id);
+//					this.deliveredMessages.put(id, aMessage);
+				}
+				this.deliveredGeoMessages.put(id, aGeoMessage); 
 			}
 			// -> put to buffer (because of the nature of the Geocasting)
 			addToGeoMessages(aGeoMessage, false);
@@ -398,6 +422,15 @@ public abstract class GeoMessageRouter {
 		}
 		
 		return aGeoMessage;
+	}
+	
+	protected boolean allParts(String key) {
+
+		for(int i=0;i<4;i++) {
+			if(deliveredParts.get(key)[i]==null)
+				return false;
+		}
+		return true;
 	}
 	
 	/**
@@ -486,7 +519,17 @@ public abstract class GeoMessageRouter {
 	 */
 	public boolean createNewGeoMessage(GeoMessage m) {
 		m.setTtl(this.msgTtl);
-		addToGeoMessages(m, true);		
+		String payload = m.getPayload();
+		BigInteger[] payload_codes = GeoMessage.encrypt(payload);
+		String[] payload_parts = new String[4];
+		for(int i=0;i<4;i++) {
+			payload_parts[i] = GeoMessage.decode(payload_codes[i]);
+			Integer I = new Integer(i+1);
+			GeoMessage part = m.replicate(m.getId()+"$"+I.toString());
+			part.setPayload(payload_parts[i]);
+			part.setPartID(i+1);
+			addToGeoMessages(part, true);
+		}		
 		return true;
 	}
 	
