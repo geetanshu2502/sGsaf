@@ -215,7 +215,8 @@ public class GMStatsReport extends Report implements MessageListener, GeoMessage
 		if (finalTarget) {
 			this.geoLatencies.add(getSimTime() - 
 			this.geoCreationTimes.get(m.getId()) );
-			this.nrofGeoDelivered++;
+			if(m.getPartID() == 0)
+				this.nrofGeoDelivered++;
 			this.geoHopCounts.add(m.getHops().size() - 1);
 			
 			if (m.isResponse()) {
@@ -255,7 +256,8 @@ public class GMStatsReport extends Report implements MessageListener, GeoMessage
 		}
 		
 		this.geoCreationTimes.put(m.getId(), getSimTime());
-		this.nrofGeoCreated++;
+		if(m.getPartID() == 0)
+			this.nrofGeoCreated++;
 		if (m.getResponseSize() > 0) {
 			this.nrofResponseReqCreated++;
 		}
