@@ -4,6 +4,7 @@
  */
 package core;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,6 +57,12 @@ public class GeoMessage implements Comparable<Message> {
 	/** Application ID of the application that created the message */
 	private String	appID;
 	
+	/** Content of the message payload */
+	private String payload;
+
+	/** Part ID of a part of a Message */
+	private int partID;
+
 	static {
 		reset();
 		DTNSim.registerForReset(Message.class.getCanonicalName());
@@ -76,7 +83,7 @@ public class GeoMessage implements Comparable<Message> {
 		this.size = size;
 		this.path = new ArrayList<DTNHost>();
 		this.uniqueId = nextUniqueId;
-		
+		this.partID = 0;
 		this.timeCreated = SimClock.getTime();
 		this.timeReceived = this.timeCreated;
 		this.initTtl = INFINITE_TTL;
@@ -84,7 +91,27 @@ public class GeoMessage implements Comparable<Message> {
 		this.requestMsg = null;
 		this.properties = null;
 		this.appID = null;
-		
+		this.payload = "abcdefgh";
+		GeoMessage.nextUniqueId++;
+		addNodeOnPath(from);
+	}
+	
+	public GeoMessage(DTNHost from, List<Cast> to, String id, int size, int partID, String payload) {
+		this.from = from;
+		this.to = to;
+		this.id = id;
+		this.size = size;
+		this.path = new ArrayList<DTNHost>();
+		this.uniqueId = nextUniqueId;
+		this.partID = partID;
+		this.timeCreated = SimClock.getTime();
+		this.timeReceived = this.timeCreated;
+		this.initTtl = INFINITE_TTL;
+		this.responseSize = 0;
+		this.requestMsg = null;
+		this.properties = null;
+		this.appID = null;
+		this.payload = payload;
 		GeoMessage.nextUniqueId++;
 		addNodeOnPath(from);
 	}
@@ -111,6 +138,17 @@ public class GeoMessage implements Comparable<Message> {
 	 */
 	public String getId() {
 		return this.id;
+	}
+	
+	public String getId(boolean strip) {
+		if(!strip)
+			return this.getId();
+
+		int index = this.id.lastIndexOf("$");
+		if(index==-1)
+			return this.id;
+		else
+			return this.id.substring(0, index);
 	}
 	
 	/**
@@ -258,7 +296,7 @@ public class GeoMessage implements Comparable<Message> {
 	 * @return a string representation of the message
 	 */
 	public String toString () {
-		return id;
+		return this.getId(true)+"["+this.partID+"]"+":"+this.getPayload();
 	}
 
 	/**
@@ -274,7 +312,8 @@ public class GeoMessage implements Comparable<Message> {
 		this.requestMsg  = m.requestMsg;
 		this.initTtl = m.initTtl;
 		this.appID = m.appID;
-		
+		this.partID = m.getPartID();
+		this.setPayload(m.getPayload());
 		if (m.properties != null) {
 			Set<String> keys = m.properties.keySet();
 			for (String key : keys) {
@@ -343,6 +382,12 @@ public class GeoMessage implements Comparable<Message> {
 		return m;
 	}
 	
+	public GeoMessage replicate(String id) {
+		GeoMessage m = this.replicate();
+		m.id = id;
+		return m;
+	}
+	
 	/**
 	 * Compares two messages by their ID (alphabetically).
 	 * @see String#compareTo(String)
@@ -373,5 +418,95 @@ public class GeoMessage implements Comparable<Message> {
 	public void setAppID(String appID) {
 		this.appID = appID;
 	}
+	
+	public String getPayload() {
+		return payload;
+	}
+
+	public void setPayload(String payload) {
+		this.payload = payload;
+	}
+
+	public int getPartID() {
+		return partID;
+	}
+
+	public void setPartID(int partID) {
+		this.partID = partID;
+	}
+
+	public static BigInteger[] encrypt(String s) {
+
+        int len = s.length() / 4;
+
+        String temp = "";
+        int i = 0, char_count = 0, word_count = 0;
+        String[] words = new String[4];
+
+        while (word_count != 4) {
+            while (char_count != len) {
+                temp += s.charAt(i++);
+                char_count++;
+            }
+            words[word_count++] = temp;
+            char_count = 0;
+            temp = "";
+        }
+
+        BigInteger[] values = new BigInteger[4];
+        BigInteger[] codes = new BigInteger[4];
+
+        for (i = 0; i < 4; i++)
+            values[i] = encode(words[i]);
+
+        codes[0] = values[0].xor(values[1]);
+
+        for (i = 1; i < 4; i++)
+            codes[i] = values[i].xor(codes[i - 1]);
+
+        return codes;
+    }
+
+    public static BigInteger encode(String word) {
+
+        BigInteger code = BigInteger.valueOf(0);
+
+        for (int i = word.length() - 1; i >= 0; i--) {
+
+            long tba = (long) Math.pow(256, word.length() - 1 - i) * (int) (word.charAt(i));
+            code = code.add(BigInteger.valueOf(tba));
+        }
+        return code;
+    }
+
+    public static String decode(BigInteger num) {
+        String res = "";
+        BigInteger base = BigInteger.valueOf(256);
+        BigInteger zero = BigInteger.valueOf(0);
+        while (!num.equals(zero)) {
+            char c = (char) Integer.parseInt(num.mod(base).toString());
+            res = c + res;
+            num = num.divide(base);
+        }
+        return res;
+    }
+
+    public static String decrypt(BigInteger[] codes) {  //s=encrypted string
+
+        BigInteger[] values = new BigInteger[4];
+        //values[0] = codes[0];
+
+        for (int i = 3; i > 0; i--)
+            values[i] = codes[i-1].xor(codes[i]);
+
+	   values[0] = codes[0].xor(values[1]);        
+         String original = "";
+
+        for (int i = 0; i < 4; i++)
+            original += decode(values[i]);
+
+        return original;
+    }
+
 	
 }
