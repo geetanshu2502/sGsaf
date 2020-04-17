@@ -353,7 +353,7 @@ public abstract class GeoMessageRouter {
 		GeoMessage incoming = removeFromIncomingBuffer(id, from);
 		boolean isFinalRecipient = false;
 		boolean isFirstDelivery; // is this first delivered instance of the msg
-		
+		boolean put_to_buffer = true; //if a part do not put to buffer
 		
 		if (incoming == null) {
 			throw new SimError("No geomessage with ID " + id + " in the incoming "+
@@ -378,8 +378,8 @@ public abstract class GeoMessageRouter {
 			isFinalRecipient = isFinalRecipient || getTo.checkThePoint(this.geohost.getLocation());
 		}
 //		isFinalRecipient = aGeoMessage.getTo().checkThePoint(this.geohost.getLocation());
-		isFirstDelivery = isFinalRecipient &&
-		!isDeliveredGeoMessage(aGeoMessage);
+		isFirstDelivery = isFinalRecipient && !isDeliveredGeoMessage(aGeoMessage);
+		
 
 		if (!isFinalRecipient && outgoing!=null) {
 			// not the final recipient and app doesn't want to drop the message
@@ -387,26 +387,32 @@ public abstract class GeoMessageRouter {
 			addToGeoMessages(aGeoMessage, false);
 		} else if (isFinalRecipient) {
 			if (isFirstDelivery) {
-				String key = aGeoMessage.getId(true);
-				if(!this.deliveredParts.containsKey(key)) {
-					this.deliveredParts.put(key, new GeoMessage[4]);
-				}
-				this.deliveredParts.get(key)[aGeoMessage.getPartID()-1] = aGeoMessage;
-				if(allParts(key)) {
-					String payload = new String();
-					BigInteger[] arr = new BigInteger[4];
-					for(int i=0;i<4;i++) {
-						arr[i] = GeoMessage.encode(deliveredParts.get(key)[i].getPayload());
+				if(aGeoMessage.getPartID()!=0) {
+					String key = aGeoMessage.getId(true);
+					if(!this.deliveredParts.containsKey(key)) {
+						this.deliveredParts.put(key, new GeoMessage[4]);
 					}
-					payload = GeoMessage.decrypt(arr);
-					aGeoMessage = aGeoMessage.replicate(key);
-					aGeoMessage.setPartID(0);
-					aGeoMessage.setPayload(payload);
-//					System.out.println("received" + aMessage.getPayload() + aMessage.getId(true));
-//					this.deliveredParts.remove(id);
-//					this.deliveredMessages.put(id, aMessage);
+					this.deliveredParts.get(key)[aGeoMessage.getPartID()-1] = aGeoMessage;
+					if(allParts(key)) {
+						String payload = new String();
+						BigInteger[] arr = new BigInteger[4];
+						for(int i=0;i<4;i++) {
+							arr[i] = GeoMessage.encode(deliveredParts.get(key)[i].getPayload());
+						}
+						payload = GeoMessage.decrypt(arr);
+						aGeoMessage = aGeoMessage.replicate(key);
+						aGeoMessage.setPartID(0);
+						aGeoMessage.setPayload(payload);
+						put_to_buffer = true; // a complete message is delivered
+//						System.out.println("received" + aMessage.getPayload() + aMessage.getId(true));
+//						this.deliveredParts.remove(id);
+//						this.deliveredMessages.put(id, aMessage);	
+					} else {
+						put_to_buffer = false;
+					}
 				}
-				this.deliveredGeoMessages.put(id, aGeoMessage); 
+				if(put_to_buffer)
+					this.deliveredGeoMessages.put(id, aGeoMessage); 
 			}
 			// -> put to buffer (because of the nature of the Geocasting)
 			addToGeoMessages(aGeoMessage, false);
