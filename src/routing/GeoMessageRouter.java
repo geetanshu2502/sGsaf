@@ -400,13 +400,10 @@ public abstract class GeoMessageRouter {
 							arr[i] = GeoMessage.encode(deliveredParts.get(key)[i].getPayload());
 						}
 						payload = GeoMessage.decrypt(arr);
-						aGeoMessage = aGeoMessage.replicate(key);
+						aGeoMessage = aGeoMessage.replicate(aGeoMessage.getId());
 						aGeoMessage.setPartID(0);
 						aGeoMessage.setPayload(payload);
 						put_to_buffer = true; // a complete message is delivered
-//						System.out.println("received" + aMessage.getPayload() + aMessage.getId(true));
-//						this.deliveredParts.remove(id);
-//						this.deliveredMessages.put(id, aMessage);	
 					} else {
 						put_to_buffer = false;
 					}
@@ -525,17 +522,7 @@ public abstract class GeoMessageRouter {
 	 */
 	public boolean createNewGeoMessage(GeoMessage m) {
 		m.setTtl(this.msgTtl);
-		String payload = m.getPayload();
-		BigInteger[] payload_codes = GeoMessage.encrypt(payload);
-		String[] payload_parts = new String[4];
-		for(int i=0;i<4;i++) {
-			payload_parts[i] = GeoMessage.decode(payload_codes[i]);
-			Integer I = new Integer(i+1);
-			GeoMessage part = m.replicate(m.getId()+"$"+I.toString());
-			part.setPayload(payload_parts[i]);
-			part.setPartID(i+1);
-			addToGeoMessages(part, true);
-		}		
+		addToGeoMessages(m, true);	
 		return true;
 	}
 	

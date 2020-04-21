@@ -236,7 +236,7 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 		this.nrofGeoRelayed++;
 		if (finalTarget) {
 			this.geoLatencies.add(getSimTime() - 
-			this.geoCreationTimes.get(m.getId()) );
+			this.geoCreationTimes.get(m.getId(true)) );
 			this.nrofGeoDelivered++;
 			this.geoHopCounts.add(m.getHops().size() - 1);
 			

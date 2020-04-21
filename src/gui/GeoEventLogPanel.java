@@ -404,7 +404,7 @@ public class GeoEventLogPanel extends JPanel
 			boolean firstDelivery) {
 		for(Cast getTo : m.getTo()) {
 			if (firstDelivery) {
-				processGeoEvent(gMsgDeliveredCheck, "GeoMessage delivered", from, to, m); 
+				processGeoEvent(gMsgDeliveredCheck, "GeoMessage delivered" + m.toString(), from, to, m); 
 			}
 			else if (getTo.checkThePoint(to.getLocation())) { 
 				processGeoEvent(gMsgDeliveredCheck, "GeoMessage delivered again", 

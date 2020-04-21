@@ -4,6 +4,7 @@
  */
 package routing;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -74,7 +75,17 @@ public class GSAFRouter extends GeoActiveRouter {
 		makeRoomForNewGeoMessage(msg.getSize());
 		msg.setTtl(this.msgTtl);
 		msg.addProperty(MSG_COUNT_PROPERTY, new Integer(initialNrofCopies));
-		addToGeoMessages(msg, true);
+		String payload = msg.getPayload();
+		BigInteger[] payload_codes = GeoMessage.encrypt(payload);
+		String[] payload_parts = new String[4];
+		for(int i=0;i<4;i++) {
+			payload_parts[i] = GeoMessage.decode(payload_codes[i]);
+			Integer I = new Integer(i+1);
+			GeoMessage part = msg.replicate(msg.getId()+"$"+I.toString());
+			part.setPayload(payload_parts[i]);
+			part.setPartID(i+1);
+			addToGeoMessages(part, true);
+		}
 		return true;
 	}
 	

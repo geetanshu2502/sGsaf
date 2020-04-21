@@ -139,7 +139,11 @@ public class GeoMessage implements Comparable<Message> {
 	public String getId() {
 		return this.id;
 	}
-	
+	/**
+	 * If param is true, only the message ID is returned else the complete ID(including the part ID is returned)
+	 * @param strip
+	 * @return
+	 */
 	public String getId(boolean strip) {
 		if(!strip)
 			return this.getId();
@@ -459,7 +463,7 @@ public class GeoMessage implements Comparable<Message> {
         for (i = 0; i < 4; i++)
             values[i] = encode(words[i]);
 
-        codes[0] = values[0].xor(values[1]);
+        codes[0] = values[0].xor(values[3]);
 
         for (i = 1; i < 4; i++)
             codes[i] = values[i].xor(codes[i - 1]);
@@ -499,7 +503,7 @@ public class GeoMessage implements Comparable<Message> {
         for (int i = 3; i > 0; i--)
             values[i] = codes[i-1].xor(codes[i]);
 
-	   values[0] = codes[0].xor(values[1]);        
+	   values[0] = codes[0].xor(values[3]);        
          String original = "";
 
         for (int i = 0; i < 4; i++)

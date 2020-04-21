@@ -7,6 +7,7 @@ package routing;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -113,12 +114,17 @@ public abstract class GeoActiveRouter extends GeoMessageRouter {
 		GeoDTNHost other = (GeoDTNHost) con.getOtherNode(getGeoHost());
 		/* do a copy to avoid concurrent modification exceptions 
 		 * (startTransfer may remove messages) */
-		ArrayList<GeoMessage> temp = 
-			new ArrayList<GeoMessage>(this.getGeoMessageCollection());
+		ArrayList<GeoMessage> temp = new ArrayList<GeoMessage>(this.getGeoMessageCollection());
 		boolean flag = false;
+
 		for (GeoMessage m : temp) {
+			flag =false;
 			for(Cast getTo : m.getTo()) {
-				if (getTo.checkThePoint(other.getLocation())) {
+				boolean flag2 = true;
+				Collection<GeoMessage> otherMessages = other.getGeoMessageCollection();
+				if(otherMessages.contains(m.getId(true)))
+					flag2 = false;
+				if (flag2 && getTo.checkThePoint(other.getLocation())) {
 					if (startTransfer(m, con) == RCV_OK) {
 						flag = flag || true;
 					}
@@ -376,13 +382,17 @@ public abstract class GeoActiveRouter extends GeoMessageRouter {
 			return new ArrayList<Tuple<GeoMessage, Connection>>(0); 
 		}
 
-		List<Tuple<GeoMessage, Connection>> forTuples = 
-			new ArrayList<Tuple<GeoMessage, Connection>>();
+		List<Tuple<GeoMessage, Connection>> forTuples = new ArrayList<Tuple<GeoMessage, Connection>>();
+		boolean flag = true;
 		for (GeoMessage m : getGeoMessageCollection()) {
 			for (Connection con : getConnections()) {
+				flag = true;
 				GeoDTNHost to = (GeoDTNHost) con.getOtherNode(getGeoHost());
+				Collection<GeoMessage> otherMessages = to.getGeoMessageCollection();
+				if(otherMessages.contains(m.getId(true)))
+					flag = false;
 				for(Cast getTo : m.getTo()) {
-					if (getTo.checkThePoint(to.getLocation())) {
+					if ( flag && getTo.checkThePoint(to.getLocation())) {
 						forTuples.add(new Tuple<GeoMessage, Connection>(m,con));
 					}
 				}				
@@ -427,17 +437,35 @@ public abstract class GeoActiveRouter extends GeoMessageRouter {
 	  * transfer was started. 
 	  */
 	protected GeoMessage tryAllMessages(Connection con, List<GeoMessage> messages) {
+		Collection<GeoMessage> OtherMessages = ((GeoDTNHost)con.getOtherNode(getGeoHost())).getGeoMessageCollection();
+		HashMap<String,Integer[] > map = new HashMap<String,Integer[] >();
+		for (GeoMessage m : OtherMessages) {
+			if(!map.containsKey(m.getId(true))) {
+				map.put(m.getId(true),new Integer[4]);
+				for(int i=0;i<4;i++) {
+					map.get(m.getId(true))[i] = 0;
+				}
+			}
+			map.get(m.getId(true))[Math.max(0,m.getPartID()-1)] = 1;
+		}
 		for (GeoMessage m : messages) {
-			int retVal = startTransfer(m, con); 
+
+			int retVal = 1;
+			int t = m.getPartID()-1;
+			String id = m.getId(true);
+			if(t==-1) {
+				retVal = startTransfer(m,con);
+			}else if(!map.containsKey(id)||(map.get(id)[(t+1)%4]!=1 && map.get(id)[(t+3)%4]!=1)) {
+				retVal = startTransfer(m, con);
+			}
+
 			if (retVal == RCV_OK) {
 				return m;	// accepted a message, don't try others
-			}
-			else if (retVal > 0) { 
+			} else if (retVal > 0) {
 				return null; // should try later -> don't bother trying others
-			}
-		}
-		
-		return null; // no message was accepted		
+			}	
+	}
+		return null;
 	}
 
 	/**
