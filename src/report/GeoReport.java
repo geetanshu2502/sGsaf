@@ -211,8 +211,7 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 
 		this.nrofRelayed++;
 		if (finalTarget) {
-			this.latencies.add(getSimTime() - 
-				this.creationTimes.get(m.getId()) );
+			this.latencies.add(getSimTime() - this.creationTimes.get(m.getId()) );
 			this.nrofDelivered++;
 			this.hopCounts.add(m.getHops().size() - 1);
 			
@@ -235,9 +234,9 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 		
 		this.nrofGeoRelayed++;
 		if (finalTarget) {
-			this.geoLatencies.add(getSimTime() - 
-			this.geoCreationTimes.get(m.getId(true)) );
-			this.nrofGeoDelivered++;
+			this.geoLatencies.add(getSimTime() - this.geoCreationTimes.get(m.getId()) );
+			if(m.getPartID() == 0)
+				this.nrofGeoDelivered++;
 			this.geoHopCounts.add(m.getHops().size() - 1);
 			
 			if(perCastLatencies.get(m.getTo().toString()) != null) {
@@ -289,7 +288,8 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 		}
 		
 		this.geoCreationTimes.put(m.getId(), getSimTime());
-		this.nrofGeoCreated++;
+		if(m.getPartID() == 1)
+			this.nrofGeoCreated++;
 		if (m.getResponseSize() > 0) {
 			this.nrofResponseReqCreated++;
 		}
