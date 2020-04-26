@@ -1,4 +1,11 @@
-/routing/
+/applications/
 /core/
 /gui/
+/input/
+/interfaces/
+/movement/
 /report/
+/routing/
+/test/
+/ui/
+/util/

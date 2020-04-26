@@ -84,7 +84,7 @@ public class GSAFRouter extends GeoActiveRouter {
 			GeoMessage part = msg.replicate(msg.getId()+"$"+I.toString());
 			part.setPayload(payload_parts[i]);
 			part.setPartID(i+1);
-			addToGeoMessages(part, true);
+			addToGeoMessages(part, i==0);
 		}
 		return true;
 	}

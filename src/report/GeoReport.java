@@ -157,11 +157,11 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 	}
 
 	public void geoMessageDeleted(GeoMessage m, GeoDTNHost where, boolean dropped) {
-		if (isWarmupID(m.getId())) {
+		if (isWarmupID(m.getId(true))) {
 			return;
 		}
 		
-		if (isCooldownID(m.getId())) {
+		if (isCooldownID(m.getId(true))) {
 			return;
 		}
 		
@@ -188,11 +188,11 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 	}
 	
 	public void geoMessageTransferAborted(GeoMessage m, GeoDTNHost from, GeoDTNHost to) {
-		if (isWarmupID(m.getId())) {
+		if (isWarmupID(m.getId(true))) {
 			return;
 		}
 		
-		if (isCooldownID(m.getId())) {
+		if (isCooldownID(m.getId(true))) {
 			return;
 		}
 		
@@ -224,30 +224,29 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 
 	public void geoMessageTransferred(GeoMessage m, GeoDTNHost from, GeoDTNHost to,
 			boolean finalTarget) {
-		if (isWarmupID(m.getId())) {
+		if (isWarmupID(m.getId(true))) {
 			return;
 		}
 
-		if (isCooldownID(m.getId())) {
+		if (isCooldownID(m.getId(true))) {
 			return;
 		}
 		
 		this.nrofGeoRelayed++;
 		if (finalTarget) {
-			this.geoLatencies.add(getSimTime() - this.geoCreationTimes.get(m.getId()) );
-			if(m.getPartID() == 0)
-				this.nrofGeoDelivered++;
+			this.geoLatencies.add(getSimTime() - this.geoCreationTimes.get(m.getId(true)) );
+			this.nrofGeoDelivered++;
 			this.geoHopCounts.add(m.getHops().size() - 1);
 			
 			if(perCastLatencies.get(m.getTo().toString()) != null) {
 				List<Double> geolates = perCastLatencies.get(m.getTo().toString());
-				geolates.add(getSimTime() - this.geoCreationTimes.get(m.getId()));
+				geolates.add(getSimTime() - this.geoCreationTimes.get(m.getId(true)));
 				perCastLatencies.put(m.getTo().toString(), geolates);
 			}
 			
 			if(perCastLatencies.get(m.getTo().toString()) == null) {
 				List<Double> geolates = new ArrayList<Double>();
-				geolates.add(getSimTime() - this.geoCreationTimes.get(m.getId()));
+				geolates.add(getSimTime() - this.geoCreationTimes.get(m.getId(true)));
 				perCastLatencies.put(m.getTo().toString(), geolates);
 			}
 			
@@ -278,23 +277,23 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 	
 	public void newGeoMessage(GeoMessage m) {
 		if (isWarmup()) {
-			addWarmupID(m.getId());
+			addWarmupID(m.getId(true));
 			return;
 		}
 
 		if (isCooldown()) {
-			addCooldownID(m.getId());
+			addCooldownID(m.getId(true));
 			return;
 		}
 		
-		this.geoCreationTimes.put(m.getId(), getSimTime());
-		if(m.getPartID() == 1)
-			this.nrofGeoCreated++;
+		this.geoCreationTimes.put(m.getId(true), getSimTime());
+		// so that only complete messages are counted
+		this.nrofGeoCreated++;
 		if (m.getResponseSize() > 0) {
 			this.nrofResponseReqCreated++;
 		}
 		
-		String temp = m.getId();
+		String temp = m.getId(true);//##########################################################################
 		List <Pair> Nodes = new ArrayList<Pair>();
 		this.geoDestination.put(temp, Nodes);
 		this.createdGeoMessages.add(m.replicate());
@@ -318,11 +317,11 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 	}
 	
 	public void geoMessageTransferStarted(GeoMessage m, GeoDTNHost from, GeoDTNHost to) {
-		if (isWarmupID(m.getId())) {
+		if (isWarmupID(m.getId(true))) {
 			return;
 		}
 		
-		if (isCooldownID(m.getId())) {
+		if (isCooldownID(m.getId(true))) {
 			return;
 		}
 
@@ -342,7 +341,7 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 					if (check)
 					{
 						Boolean existed = false;
-						List<Pair> Destinations = this.geoDestination.get(existedGeoMessages.get(j).getId());
+						List<Pair> Destinations = this.geoDestination.get(existedGeoMessages.get(j).getId(true));
 						for(int k=0; k<Destinations.size(); k++)
 						{
 							if(Destinations.get(k).getGeoHost().toString() == Hosts.get(i).toString())
@@ -354,7 +353,7 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 						{
 							Pair temp = new Pair(Hosts.get(i), this.getSimTime());
 							Destinations.add(temp);
-							this.geoDestination.put(existedGeoMessages.get(j).getId(), Destinations);
+							this.geoDestination.put(existedGeoMessages.get(j).getId(true), Destinations);
 						}
 					}				
 				}
@@ -364,7 +363,7 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 
 	private void updatePairs() {
 		for(int i=0; i<existedGeoMessages.size(); i++){
-			List<Pair> temp = this.geoDestination.get(existedGeoMessages.get(i).getId());
+			List<Pair> temp = this.geoDestination.get(existedGeoMessages.get(i).getId(true));
 			for(int j=0; j<temp.size(); j++){
 				for(Cast getTo : existedGeoMessages.get(i).getTo()) {
 					Boolean check = getTo.checkThePoint(temp.get(j).getGeoHost().getLocation());
@@ -383,7 +382,7 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 		    double value = entry.getValue();
 		    if (value <= this.getSimTime()){
 		    	for (int i = 0; i < existedGeoMessages.size(); i++) {
-		    		if (key == existedGeoMessages.get(i).getId()){
+		    		if (key == existedGeoMessages.get(i).getId(true)){
 		    		existedGeoMessages.remove(i);
 		    		}
 		    	}
@@ -456,7 +455,8 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 			for(int i=0; i<createdGeoMessages.size(); i++)
 			{
 				int nrofdeli = 0;
-				List<Pair> dList = this.geoDestination.get(createdGeoMessages.get(i).getId());
+				List<Pair> dList = this.geoDestination.get(createdGeoMessages.get(i).getId(true));
+				System.out.println(dList.size());
 				for(int j=0; j<dList.size(); j++)
 				{
 					boolean check = dList.get(j).getGeoHost().getGeoRouter().isDeliveredGeoMessage(createdGeoMessages.get(i));
@@ -542,7 +542,7 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 				}
 			//
 			
-			List<Pair> dList = this.geoDestination.get(createdGeoMessages.get(i).getId());
+			List<Pair> dList = this.geoDestination.get(createdGeoMessages.get(i).getId(true));
 			for (int j=0; j<dList.size(); j++)
 			{
 				
@@ -801,7 +801,7 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 		    writer1 = new BufferedWriter(new OutputStreamWriter(
 		          new FileOutputStream("reports/messages.txt"), "utf-8"));
 		    for(GeoMessage m: createdGeoMessages) {
-		    	writer1.write(m.getId().toString() + ',' + m.getTo().toString() + ',' + m.getCreationTime() + '\n');
+		    	writer1.write(m.getId(true).toString() + ',' + m.getTo().toString() + ',' + m.getCreationTime() + '\n');
 		    }
 		} catch (IOException ex) {
 		  // report
@@ -854,7 +854,7 @@ public class GeoReport extends Report implements MessageListener, GeoMessageList
 				    	for (GeoMessage m: createdGeoMessages) {
 				    		
 				    		if(h.getGeoRouter().isDeliveredGeoMessage(m)){
-				    			buffer = buffer + ',' + m.getId().toString();
+				    			buffer = buffer + ',' + m.getId(true).toString();
 				    		}
 				    	}
 				    	

@@ -222,7 +222,7 @@ public abstract class GeoMessageRouter {
 	 * this host as the final recipient.
 	 */
 	public boolean isDeliveredGeoMessage(GeoMessage m) {
-		return (this.deliveredGeoMessages.containsKey(m.getId()));
+		return (this.deliveredGeoMessages.containsKey(m.getId(true)));
 	}
 	
 	/** 
@@ -400,7 +400,7 @@ public abstract class GeoMessageRouter {
 							arr[i] = GeoMessage.encode(deliveredParts.get(key)[i].getPayload());
 						}
 						payload = GeoMessage.decrypt(arr);
-						aGeoMessage = aGeoMessage.replicate(aGeoMessage.getId());
+						aGeoMessage = aGeoMessage.replicate(aGeoMessage.getId(true));
 						aGeoMessage.setPartID(0);
 						aGeoMessage.setPayload(payload);
 						put_to_buffer = true; // a complete message is delivered
@@ -420,8 +420,9 @@ public abstract class GeoMessageRouter {
 		}
 		
 		for (GeoMessageListener gml : this.gmListeners) {
+			Boolean finalTarget = isFirstDelivery && (aGeoMessage.getPartID() == 0);
 			gml.geoMessageTransferred(aGeoMessage, from, this.geohost,
-					isFirstDelivery);
+					finalTarget);
 		}
 		
 		return aGeoMessage;
