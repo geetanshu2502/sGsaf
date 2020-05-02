@@ -403,6 +403,7 @@ public abstract class GeoMessageRouter {
 						aGeoMessage = aGeoMessage.replicate(aGeoMessage.getId(true));
 						aGeoMessage.setPartID(0);
 						aGeoMessage.setPayload(payload);
+//						aGeoMessage.setSize(aGeoMessage.getSize()*4);
 						put_to_buffer = true; // a complete message is delivered
 					} else {
 						put_to_buffer = false;

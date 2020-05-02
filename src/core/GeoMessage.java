@@ -171,7 +171,10 @@ public class GeoMessage implements Comparable<Message> {
 	public int getSize() {
 		return this.size;
 	}
-
+	
+	public void setSize(int size) {
+		this.size = size;
+	}
 	/**
 	 * Adds a new node on the list of nodes this message has passed
 	 * @param node The node to add

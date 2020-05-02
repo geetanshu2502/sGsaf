@@ -24,7 +24,7 @@ public class GeoDTNSim extends DTNSim {
 	}
 
 	public static void main(String[] args) {
-		boolean batchMode = false;
+		boolean batchMode = true;
 		int nrofRuns[] = {0,1};
 		String confFiles[];
 		int firstConfIndex = 0;
